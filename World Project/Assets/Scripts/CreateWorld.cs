@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public class CreateWorld : MonoBehaviour {
+    #region PerlinNoise
     //Andrew Baron
     //Ashima 3D Noise - Unity C# Conversion
     Vector3 mul(Vector3 a, Vector3 b)
@@ -27,6 +28,10 @@ public class CreateWorld : MonoBehaviour {
     {
         return new Vector3(a.x - b, a.y - b, a.z - b);
     }
+    Vector4 sub(Vector4 a, float b)
+    {
+        return new Vector4(a.x - b, a.y - b, a.z - b, a.w - b);
+    }
 
     Vector3 div(Vector3 a, Vector3 b)
     {
@@ -42,6 +47,11 @@ public class CreateWorld : MonoBehaviour {
         return new Vector4(Mathf.Floor(a.x), Mathf.Floor(a.y), Mathf.Floor(a.z), Mathf.Floor(a.w));
     }
 
+    Vector3 frac(Vector3 a)
+    {
+        return floor(a) - a;
+    }
+
     float dot(Vector3 a, Vector3 b)
     {
         return a.x * b.x + a.y * b.y + a.z * b.z;
@@ -54,6 +64,20 @@ public class CreateWorld : MonoBehaviour {
     Vector4 abs(Vector4 a)
     {
         return new Vector4(Mathf.Abs(a.x), Mathf.Abs(a.y), Mathf.Abs(a.z), Mathf.Abs(a.w));
+    }
+
+    Vector4 step(Vector4 edge, Vector4 x)
+    {
+        Vector4 result = new Vector4(0.0f, 0.0f);
+        if (x.x < edge.x) result.x = 0.0f;
+        else result.x = 1.0f;
+        if (x.y < edge.y) result.y = 0.0f;
+        else result.y = 1.0f;
+        if (x.z < edge.z) result.z = 0.0f;
+        else result.z = 1.0f;
+        if (x.w < edge.w) result.w = 0.0f;
+        else result.w = 1.0f;
+        return result;
     }
 
     //start of Ashima 3D noise code:
@@ -105,20 +129,20 @@ public class CreateWorld : MonoBehaviour {
         Vector4 ixy1 = permute(ixy + iz1);
 
         Vector4 gx0 = ixy0 / 7.0f;
-        Vector4 gy0 = frac(floor(gx0) / 7.0f) - 0.5f;
+        Vector4 gy0 = sub(frac(floor(gx0) / 7.0f), 0.5f);
         gx0 = frac(gx0);
         Vector4 gz0 = new Vector4(0.5f, 0.5f, 0.5f, 0.5f) - abs(gx0) - abs(gy0);
-        Vector4 sz0 = step(gz0, (Vector4)0.0);
-        gx0 -= sz0 * (step((Vector4)0.0, gx0) - 0.5);
-        gy0 -= sz0 * (step((Vector4)0.0, gy0) - 0.5);
+        Vector4 sz0 = step(gz0, new Vector4(0.0f, 0.0f));
+        gx0 -= mul(sz0, (sub(step(new Vector4(0.0f, 0.0f), gx0), 0.5f)));
+        gy0 -= mul(sz0, (sub(step(new Vector4(0.0f, 0.0f), gy0), 0.5f)));
 
         Vector4 gx1 = ixy1 / 7.0f;
-        Vector4 gy1 = frac(floor(gx1) / 7.0) - 0.5;
+        Vector4 gy1 = sub(frac(floor(gx1) / 7.0f), 0.5f);
         gx1 = frac(gx1);
-        Vector4 gz1 = (Vector4)0.5 - abs(gx1) - abs(gy1);
-        Vector4 sz1 = step(gz1, (Vector4)0.0);
-        gx1 -= sz1 * (step((Vector4)0.0, gx1) - 0.5);
-        gy1 -= sz1 * (step((Vector4)0.0, gy1) - 0.5);
+        Vector4 gz1 = new Vector4(0.5f, 0.5f, 0.5f, 0.5f) - abs(gx1) - abs(gy1);
+        Vector4 sz1 = step(gz1, new Vector4(0.0f, 0.0f));
+        gx1 -= mul(sz1, (sub(step(new Vector4(0.0f, 0.0f), gx1), 0.5f)));
+        gy1 -= mul(sz1, (sub(step(new Vector4(0.0f, 0.0f), gy1), 0.5f)));
 
         Vector3 g000 = new Vector3(gx0.x, gy0.x, gz0.x);
         Vector3 g100 = new Vector3(gx0.y, gy0.y, gz0.y);
@@ -155,14 +179,50 @@ public class CreateWorld : MonoBehaviour {
         float n_xyz = Mathf.Lerp(n_yz.x, n_yz.y, fade_xyz.x);
         return 2.2f * n_xyz;
     }
+    //turbulence method, used to create noise
+    float turbulence(Vector3 p)
+    {
+        float t = -.5f;
 
+        for (float i = 1.0f; i <= 10.0f; i++)
+        {
+            float power = Mathf.Pow(2.0f, i);
+            t += Mathf.Abs(pnoise((p * power), new Vector3(10.0f, 10.0f, 10.0f)) / power);
+        }
+        return t;
+    }
+    #endregion
+    public GameObject World;
+    private float noiseshift = 0.5f; //noise seed to shift the noise map
     // Use this for initialization
     void Start () {
-		
+        GenWorld();
 	}
 	
 	// Update is called once per frame
 	void Update () {
 		
 	}
+    void GenWorld()
+    {
+        Mesh WorldMesh = World.GetComponent<MeshFilter>().mesh;
+        Vector3[] vertices = WorldMesh.vertices;
+        Vector3[] normals = WorldMesh.normals;
+        for(int i = 0; i < vertices.Length; i++)
+        {
+            //changing verticies for terraformation
+            float noise = -0.7f * turbulence(noiseshift * normals[i]); // turbulent noise 
+            float posnoise = 2.0f * pnoise(0.04f * vertices[i], new Vector3(100.0f, 100.0f, 100.0f));
+            float displacement = -1.0f * noise + posnoise;
+            if (displacement < -2.5f)
+            {
+                displacement = -2.5f;
+            }
+            vertices[i] = vertices[i] + normals[i] * displacement;
+        }
+        WorldMesh.vertices = vertices;
+        WorldMesh.RecalculateBounds();
+        World.GetComponent<MeshFilter>().mesh = WorldMesh;
+
+    }
 }

@@ -12,12 +12,17 @@
 			CGPROGRAM
 			#pragma vertex vert //use vert function as the vertex shader
 			#pragma fragment frag //use frag function as the fragment shader
+			#pragma geometry geom //use geom function and geometry shader
 			#pragma enable_d3d11_debug_symbols
+			#pragma target 4.0
+			#pragma multi_compile_fwdbase nolightmap nodirlightmap nodynlightmap novertexlight
 			// make fog work
 			//#pragma multi_compile_fog
 
 			#include "UnityCG.cginc"
 			#include "UnityLightingCommon.cginc"
+			#include "Lighting.cginc"
+			#include "AutoLight.cginc"
 			//start of Ashima 3D noise code:
 			float3 mod(float3 x, float3 y)
 			{
@@ -211,17 +216,22 @@
 			struct appdata
 			{
 				float4 vertex : POSITION; //vertex position
-				float2 uv : TEXCOORD0; //texture coordinate
+				nointerpolation float3 color: COLOR;
 				float3 normal : NORMAL;
 			};
 			
 			//v2f: vertex to fragment (things to be sent from v to f)
 			struct v2f
 			{
-				float2 uv : TEXCOORD0; //texture coordinate
+				//float2 uv : TEXCOORD0; //texture coordinate
+				SHADOW_COORDS(1) //shadow data into texcoord1
 				float4 vertex : SV_POSITION; //clip space position
-				float3 normal : NORMAL; //vertex normal
-				fixed4 diffuse : COLOR0; //diffuse lighting color
+				float3 normal : NORMAL0; //vertex normal
+				float3 avgnormal : NORMAL1;
+				nointerpolation fixed3 color : COLOR0;
+				nointerpolation fixed3 randcol : COLOR3;
+				nointerpolation fixed4 diffuse : COLOR1; //diffuse lighting color
+				nointerpolation fixed3 ambient : COLOR2; //ambient lighting color
 			};
 
 			sampler2D _MainTex; //texture we are sampling
@@ -235,8 +245,9 @@
 
 				//changing verticies for terraformation
 				float noiseshift = 0.5f; //noise seed to shift the noise map
+				float seed = 3.0f;
 				noise = -0.7f * turbulence(noiseshift * v.normal); // turbulent noise 
-				float posnoise = 2.0 * pnoise(0.04 * v.vertex, float3(100.0f, 100.0f, 100.0f));
+				float posnoise = 2.0 * pnoise(0.04 * v.vertex + seed, float3(100.0f, 100.0f, 100.0f));
 				float displacement = -10.0f * noise + posnoise;
 				if (displacement < -2.5f)
 				{
@@ -250,25 +261,49 @@
 				half3 worldNormal = UnityObjectToWorldNormal(v.normal); //get vertex normal in world space
 				half nl = max(0, dot(worldNormal, _WorldSpaceLightPos0.xyz)); //use dot normal and light direction for diffuse
 
-				o.uv = v.uv;
 				o.diffuse = nl * _LightColor0; //factor in light color for diffuse lighting
 				o.diffuse.rgb += ShadeSH9(half4(worldNormal, 1)); //ambient lighting
+				o.ambient = ShadeSH9(half4(worldNormal, 1));
 				o.normal = v.normal * displacement; //new normal
+				o.randcol = 0;
+				o.color = 0;
+				o.avgnormal = 0;
+				TRANSFER_SHADOW(o)
 				return o;
 			}
 			
+			[maxvertexcount(3)]
+			void geom(triangle v2f input[3], inout TriangleStream<v2f> OutputStream)
+			{
+				v2f output = (v2f)0;
+				float3 avgnormal = (input[0].normal + input[1].normal + input[2].normal) / 3;
+				float r = .08 * rand(avgnormal, float3(12.9898, 78.233, 151.7182));
+				for (int i = 0; i < 3; i++)
+				{
+					output.normal = input[i].normal;
+					output.avgnormal = avgnormal; //sets the average normal between the 3 vertices
+					output.randcol = r;
+					output.vertex = input[i].vertex;
+					output.color = input[i].color;
+					output.diffuse = input[i].diffuse;
+					output.ambient = input[i].ambient;
+					OutputStream.Append(output);
+				}
+			}
 			//fShader
 			fixed4 frag (v2f i) : SV_Target
 			{
-				//Find color from texture based on normal length
-				//float r = .01 * rand(i.vertex, float3(12.9898, 78.233, 151.7182)); //add a bit of randomness
-				float y = -0.38f * length(i.normal);// + r;
-				float2 texPos = float2(0, y);
+				//Find color from texture based on normal length //add a bit of randomness
+				float y = -0.38f * length(i.avgnormal); // find the poly color based on the average of the 3 normals
+				float2 texPos = float2(i.randcol.x, y);
 				float4 newColor = tex2D(_MainTex, texPos);
 
 				// sample the texture and return it
 				fixed4 color = fixed4(newColor.rgb, 1.0f);
-				//color *= i.diffuse; //diffuse lighting
+
+				fixed shadow = SHADOW_ATTENUATION(i);
+				fixed3 lighting = i.diffuse * shadow + i.ambient;
+				color.rgb *= lighting; //diffuse lighting
 				return color;
 			}
 			ENDCG
