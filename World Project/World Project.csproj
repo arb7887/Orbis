@@ -226,6 +226,7 @@
   <ItemGroup>
     <None Include="Assets\Shaders\MeshNormals.shader" />
     <None Include="Assets\Shaders\WorldShader.shader" />
+    <None Include="Assets\Shaders\WorldShaderV02.shader" />
     <None Include="Assets\Shaders\test flat.shader" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

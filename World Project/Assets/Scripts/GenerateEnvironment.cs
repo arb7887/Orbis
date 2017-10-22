@@ -9,13 +9,13 @@ public class GenerateEnvironment : MonoBehaviour {
 	// Use this for initialization
 	void Start () {
         //place trees
-        PlaceTrees();
+        
 	}
 	
 	// Update is called once per frame
 	void Update () {
-		
-	}
+        PlaceTrees();
+    }
 
     //instantiate and place trees around the world based on height.
     //This will only place trees where there is a grassy area

@@ -1,8 +1,8 @@
-﻿Shader "WorldShader"
+﻿Shader "WorldShaderV02"
 {
 	Properties
 	{
-		_MainTex ("Texture", 2D) = "white" {}
+		[NoScaleOffset] _MainTex ("Texture", 2D) = "white" {}
 	}
 	SubShader
 	{
@@ -14,16 +14,15 @@
 			#pragma fragment frag //use frag function as the fragment shader
 			#pragma geometry geom //use geom function and geometry shader
 			#pragma enable_d3d11_debug_symbols
-			#pragma target 4.0
-			#pragma multi_compile_fwdbase nolightmap nodirlightmap nodynlightmap novertexlight
 			// make fog work
 			//#pragma multi_compile_fog
 
 			#include "UnityCG.cginc"
 			#include "UnityLightingCommon.cginc"
 			#include "Lighting.cginc"
+			#pragma multi_compile_fwdbase nolightmap nodirlightmap nodynlightmap novertexlight
 			#include "AutoLight.cginc"
-			//start of Ashima 3D noise code:
+			/* //start of Ashima 3D noise code:
 			float3 mod(float3 x, float3 y)
 			{
 				return x - y * floor(x / y);
@@ -194,7 +193,7 @@
 				return 2.2 * n_xyz;
 			}
 			//end of Ashima 3D noise code
-
+			
 			//turbulence method, used to create noise
 			float turbulence(float3 p)
 			{
@@ -207,7 +206,7 @@
 				}
 				return t;
 			}
-
+			*/
 			float rand(float3 co, float3 scale)
 			{
 				return frac(sin(dot(co.xyz, scale)) * 43758.5453);
@@ -244,7 +243,7 @@
 			{
 				v2f o;
 
-				//changing verticies for terraformation
+				/* //changing verticies for terraformation
 				float noiseshift = 0.5f; //noise seed to shift the noise map
 				float seed = 3.0f;// + _Time.y;
 				noise = -0.7f * turbulence(noiseshift * v.normal); // turbulent noise 
@@ -255,9 +254,9 @@
 					displacement = -2.5f;
 				}
 				float3 newVertex = v.vertex + v.normal * displacement;
-
+				*/ 
 				//transform position to clip space (multiply with Model*View*Projection matrix)
-				o.vertex = UnityObjectToClipPos(float4(newVertex, 1.0f));
+				o.vertex = UnityObjectToClipPos(v.vertex);
 
 				half3 worldNormal = UnityObjectToWorldNormal(v.normal); //get vertex normal in world space
 				half nl = max(0, dot(worldNormal, _WorldSpaceLightPos0.xyz)); //use dot normal and light direction for diffuse
@@ -265,7 +264,7 @@
 				o.diffuse = nl * _LightColor0; //factor in light color for diffuse lighting
 				o.diffuse.rgb += ShadeSH9(half4(worldNormal, 1)); //ambient lighting
 				o.ambient = ShadeSH9(half4(worldNormal, 1));
-				o.normal = v.normal * displacement; //new normal
+				o.normal = v.normal;// *displacement; //new normal
 				o.randcol = 0;
 				o.color = 0;
 				o.avgnormal = 0;
@@ -301,7 +300,7 @@
 			{
 				//Find color from texture based on normal length
 				float y = -0.38f * length(i.avgnormal); // find the poly color based on the average of the 3 normals
-				float2 texPos = float2(i.randcol.x, y);
+				float2 texPos = float2(0, y);
 				//if (length(i.avgnormal) > 2.2f) texPos.x = i.randwater;
 				float4 newColor = tex2D(_MainTex, texPos);
 				
@@ -315,5 +314,7 @@
 			}
 			ENDCG
 		}
+
+		UsePass "Legacy Shaders/VertexLit/SHADOWCASTER"
 	}
 }
