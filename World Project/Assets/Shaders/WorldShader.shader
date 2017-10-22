@@ -230,6 +230,7 @@
 				float3 avgnormal : NORMAL1;
 				nointerpolation fixed3 color : COLOR0;
 				nointerpolation fixed3 randcol : COLOR3;
+				nointerpolation fixed3 randwater : COLOR4;
 				nointerpolation fixed4 diffuse : COLOR1; //diffuse lighting color
 				nointerpolation fixed3 ambient : COLOR2; //ambient lighting color
 			};
@@ -245,10 +246,10 @@
 
 				//changing verticies for terraformation
 				float noiseshift = 0.5f; //noise seed to shift the noise map
-				float seed = 3.0f;
+				float seed = 3.0f;// + _Time.y;
 				noise = -0.7f * turbulence(noiseshift * v.normal); // turbulent noise 
 				float posnoise = 2.0 * pnoise(0.04 * v.vertex + seed, float3(100.0f, 100.0f, 100.0f));
-				float displacement = -10.0f * noise + posnoise;
+				float displacement = -12.0f * noise + posnoise;
 				if (displacement < -2.5f)
 				{
 					displacement = -2.5f;
@@ -268,6 +269,7 @@
 				o.randcol = 0;
 				o.color = 0;
 				o.avgnormal = 0;
+				o.randwater = 0;
 				TRANSFER_SHADOW(o)
 				return o;
 			}
@@ -277,12 +279,16 @@
 			{
 				v2f output = (v2f)0;
 				float3 avgnormal = (input[0].normal + input[1].normal + input[2].normal) / 3;
+				float timevar = _Time.y % 2.1f + 1.0f;
+				//if(timevar >= 2.0f)
 				float r = .08 * rand(avgnormal, float3(12.9898, 78.233, 151.7182));
+				float water = (.08 * timevar) * rand(avgnormal, float3(12.9898, 78.233, 151.7182));
 				for (int i = 0; i < 3; i++)
 				{
 					output.normal = input[i].normal;
 					output.avgnormal = avgnormal; //sets the average normal between the 3 vertices
 					output.randcol = r;
+					output.randwater = water;
 					output.vertex = input[i].vertex;
 					output.color = input[i].color;
 					output.diffuse = input[i].diffuse;
@@ -293,11 +299,12 @@
 			//fShader
 			fixed4 frag (v2f i) : SV_Target
 			{
-				//Find color from texture based on normal length //add a bit of randomness
+				//Find color from texture based on normal length
 				float y = -0.38f * length(i.avgnormal); // find the poly color based on the average of the 3 normals
 				float2 texPos = float2(i.randcol.x, y);
+				if (length(i.avgnormal) > 2.2f) texPos.x = i.randwater;
 				float4 newColor = tex2D(_MainTex, texPos);
-
+				
 				// sample the texture and return it
 				fixed4 color = fixed4(newColor.rgb, 1.0f);
 
