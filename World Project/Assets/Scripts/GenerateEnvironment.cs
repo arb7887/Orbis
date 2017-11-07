@@ -9,12 +9,12 @@ public class GenerateEnvironment : MonoBehaviour {
 	// Use this for initialization
 	void Start () {
         //place trees
-        
-	}
+        PlaceTrees();
+    }
 	
 	// Update is called once per frame
 	void Update () {
-        PlaceTrees();
+        
     }
 
     //instantiate and place trees around the world based on height.
@@ -26,8 +26,8 @@ public class GenerateEnvironment : MonoBehaviour {
         Vector3 nearestVertex;
         for (int i = 0; i < amountOfTrees; i++)
         {
-            Vector3 treePos = Random.onUnitSphere * 20 + World.transform.position;
-
+            Vector3 treePos = World.transform.position + Random.onUnitSphere * 20;
+            
             //find the nearest vertex on the world to the random position:
             minDistance = Mathf.Infinity;
             nearestVertex = Vector3.zero;
@@ -42,8 +42,9 @@ public class GenerateEnvironment : MonoBehaviour {
                 }
             }
             Vector3 nearestNormal = nearestVertex - World.transform.position;
-            treePos = treePos.normalized * nearestNormal.magnitude;
+            treePos = World.transform.position + treePos.normalized * nearestNormal.magnitude;
             Debug.Log(nearestNormal.magnitude);
+            
             Instantiate(Tree, treePos, Quaternion.identity);
         }
     }

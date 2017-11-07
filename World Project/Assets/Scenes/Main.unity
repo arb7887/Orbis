@@ -380,6 +380,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1136536431}
   - component: {fileID: 1136536430}
+  - component: {fileID: 1136536432}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -412,6 +413,20 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 4
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1136536432
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 1136536429}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bc0242c7d9b5d194f9495921a8d09cfc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  Tree: {fileID: 1618972053774904, guid: 1089da620927f584a958353890308a8a, type: 2}
+  World: {fileID: 455618293}
+  amountOfTrees: 20
 --- !u!1 &1357278448
 GameObject:
   m_ObjectHideFlags: 0

@@ -378,13 +378,13 @@ public class CreateWorld : MonoBehaviour {
         for(int i = 0; i < vertices.Length; i++)
         {
             //changing verticies for terraformation
-            float noise = -7.0f * turbulence(noiseshift * normals[i]); // turbulent noise 
-            float posnoise = 2.0f * Noise(0.5f * vertices[i]);
+            float noise = -2.0f * turbulence(noiseshift * normals[i]); // turbulent noise 
+            float posnoise = 4.0f * Noise(0.1f * vertices[i]);
             float displacement = -5f * noise + posnoise;
-            /*if (displacement < -2.5f)
+             if (displacement < -3.0f)
             {
-                displacement = -2.5f;
-            }*/
+                displacement = -3.0f;
+            }
             vertices[i] = vertices[i] + normals[i] * displacement;
         }
         WorldMesh.vertices = vertices;
